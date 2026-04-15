@@ -1,0 +1,36 @@
+experiment_name: cpu_demo
+output_root: outputs
+data:
+  dataset_dir: data/niah_demo
+  lengths: [1000, 2000]
+  train_samples_per_length: 64
+  val_samples_per_length: 16
+  test_samples_per_length: 16
+  vocab_size: 256
+  num_passkeys: 64
+  num_needles: 1
+  include_noise_words: true
+  seed: 7
+model:
+  model_type: memory_gru
+  d_model: 96
+  embedding_dim: 96
+  hidden_dim: 96
+  num_layers: 1
+  dropout: 0.1
+  bidirectional: false
+  memory_stride: 16
+  memory_top_k: 4
+  transformer_heads: 4
+  transformer_layers: 2
+  transformer_ff_dim: 192
+training:
+  batch_size: 8
+  epochs: 2
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  grad_clip: 1.0
+  seed: 7
+  num_workers: 0
+  device: auto
+

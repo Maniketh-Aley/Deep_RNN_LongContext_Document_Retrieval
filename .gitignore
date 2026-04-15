@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.ipynb_checkpoints/
+outputs/checkpoints/*.pt
+outputs/logs/*.csv
+outputs/logs/*.json
+outputs/plots/*.png
+data/niah_*/

@@ -1,0 +1,36 @@
+experiment_name: scaling_study
+output_root: outputs
+data:
+  dataset_dir: data/niah_research
+  lengths: [1000, 2000, 4000, 8000, 16000]
+  train_samples_per_length: 512
+  val_samples_per_length: 128
+  test_samples_per_length: 128
+  vocab_size: 1024
+  num_passkeys: 512
+  num_needles: 1
+  include_noise_words: true
+  seed: 123
+model:
+  model_type: gru
+  d_model: 128
+  embedding_dim: 128
+  hidden_dim: 128
+  num_layers: 1
+  dropout: 0.1
+  bidirectional: false
+  memory_stride: 32
+  memory_top_k: 4
+  transformer_heads: 4
+  transformer_layers: 2
+  transformer_ff_dim: 256
+training:
+  batch_size: 16
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  grad_clip: 1.0
+  seed: 123
+  num_workers: 0
+  device: auto
+
