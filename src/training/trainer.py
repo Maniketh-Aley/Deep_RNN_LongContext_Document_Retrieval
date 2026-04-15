@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -13,6 +14,32 @@ from src.evaluation.metrics import compute_classification_metrics
 from src.utils.io import append_csv_row, ensure_dir
 
 
+def get_amp_settings(training_cfg: Dict, device: torch.device) -> tuple[bool, torch.dtype]:
+    use_amp = bool(training_cfg.get("use_amp", False) and device.type == "cuda")
+    amp_dtype_name = training_cfg.get("amp_dtype", "bfloat16")
+    amp_dtype = torch.bfloat16 if amp_dtype_name == "bfloat16" else torch.float16
+    return use_amp, amp_dtype
+
+
+def create_scheduler(optimizer: torch.optim.Optimizer, training_cfg: Dict):
+    scheduler_type = training_cfg.get("scheduler_type", "none")
+    if scheduler_type == "cosine":
+        return torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=training_cfg["epochs"],
+            eta_min=training_cfg.get("scheduler_min_lr", 0.0),
+        )
+    if scheduler_type == "plateau":
+        return torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="max",
+            factor=training_cfg.get("scheduler_factor", 0.5),
+            patience=training_cfg.get("scheduler_patience", 2),
+            min_lr=training_cfg.get("scheduler_min_lr", 0.0),
+        )
+    return None
+
+
 def run_epoch(
     model: nn.Module,
     data_loader: DataLoader,
@@ -20,6 +47,9 @@ def run_epoch(
     optimizer: torch.optim.Optimizer | None,
     device: torch.device,
     grad_clip: float,
+    amp_enabled: bool,
+    amp_dtype: torch.dtype,
+    scaler: torch.amp.GradScaler | None,
 ) -> Tuple[float, Dict[str, float]]:
     is_train = optimizer is not None
     model.train(is_train)
@@ -36,13 +66,26 @@ def run_epoch(
             optimizer.zero_grad(set_to_none=True)
 
         with torch.set_grad_enabled(is_train):
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs["logits"]
-            loss = criterion(logits, labels)
+            autocast_context = (
+                torch.autocast(device_type=device.type, dtype=amp_dtype)
+                if amp_enabled
+                else nullcontext()
+            )
+            with autocast_context:
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                logits = outputs["logits"]
+                loss = criterion(logits, labels)
             if is_train:
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-                optimizer.step()
+                if scaler is not None:
+                    scaler.scale(loss).backward()
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                    optimizer.step()
 
         running_loss += loss.item() * input_ids.size(0)
         predictions = torch.argmax(logits, dim=-1)
@@ -76,7 +119,10 @@ def train_model(
         lr=training_cfg["learning_rate"],
         weight_decay=training_cfg["weight_decay"],
     )
+    scheduler = create_scheduler(optimizer, training_cfg)
     criterion = nn.CrossEntropyLoss()
+    amp_enabled, amp_dtype = get_amp_settings(training_cfg, device)
+    scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled and amp_dtype == torch.float16)
     history_path = log_dir / f"{config['experiment_name']}_history.csv"
     if not history_path.exists():
         with history_path.open("w", newline="", encoding="utf-8") as handle:
@@ -90,6 +136,7 @@ def train_model(
                     "val_loss",
                     "val_accuracy",
                     "val_failure_rate",
+                    "learning_rate",
                 ],
             )
             writer.writeheader()
@@ -105,6 +152,9 @@ def train_model(
             optimizer=optimizer,
             device=device,
             grad_clip=training_cfg["grad_clip"],
+            amp_enabled=amp_enabled,
+            amp_dtype=amp_dtype,
+            scaler=scaler,
         )
         val_loss, val_metrics = run_epoch(
             model=model,
@@ -113,7 +163,16 @@ def train_model(
             optimizer=None,
             device=device,
             grad_clip=training_cfg["grad_clip"],
+            amp_enabled=amp_enabled,
+            amp_dtype=amp_dtype,
+            scaler=None,
         )
+
+        if scheduler is not None:
+            if training_cfg.get("scheduler_type", "none") == "plateau":
+                scheduler.step(val_metrics["accuracy"])
+            else:
+                scheduler.step()
 
         row = {
             "epoch": epoch,
@@ -123,6 +182,7 @@ def train_model(
             "val_loss": round(val_loss, 6),
             "val_accuracy": round(val_metrics["accuracy"], 6),
             "val_failure_rate": round(val_metrics["failure_rate"], 6),
+            "learning_rate": optimizer.param_groups[0]["lr"],
         }
         append_csv_row(history_path, row)
 
@@ -133,6 +193,7 @@ def train_model(
                     "model_state_dict": model.state_dict(),
                     "config": config,
                     "val_metrics": val_metrics,
+                    "epoch": epoch,
                 },
                 best_checkpoint_path,
             )

@@ -5,6 +5,7 @@ from functools import partial
 from pathlib import Path
 from typing import Dict, Tuple
 
+import torch
 from torch.utils.data import DataLoader
 
 from src.data.dataset import NIAHDataset, build_vocabulary, collate_batch
@@ -17,6 +18,8 @@ def build_dataloaders(config: Dict) -> Tuple[object, Dict[str, DataLoader]]:
     vocabulary = build_vocabulary(dataset_dir)
     batch_size = config["training"]["batch_size"]
     num_workers = config["training"]["num_workers"]
+    pin_memory = bool(config["training"].get("pin_memory", torch.cuda.is_available()))
+    persistent_workers = bool(config["training"].get("persistent_workers", False) and num_workers > 0)
     collate_fn = partial(collate_batch, pad_idx=vocabulary.pad_idx)
 
     loaders = {}
@@ -27,6 +30,8 @@ def build_dataloaders(config: Dict) -> Tuple[object, Dict[str, DataLoader]]:
             batch_size=batch_size,
             shuffle=shuffle,
             num_workers=num_workers,
+            pin_memory=pin_memory,
+            persistent_workers=persistent_workers,
             collate_fn=collate_fn,
         )
     return vocabulary, loaders
@@ -69,4 +74,3 @@ def apply_overrides(config: Dict, args: argparse.Namespace) -> Dict:
     if args.experiment_name is not None:
         config["experiment_name"] = args.experiment_name
     return config
-

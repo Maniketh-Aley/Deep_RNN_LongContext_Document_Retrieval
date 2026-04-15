@@ -15,6 +15,7 @@ niah_benchmark/
     default.yaml
     cpu_demo.yaml
     research.yaml
+    h100_a100.yaml
   data/
   src/
     data/
@@ -75,7 +76,7 @@ Each synthetic sample is a long token sequence filled with distractor words and 
 The intended qualitative result is straightforward: vanilla recurrent models struggle as the passkey moves far from the end, explicit memory improves retrieval stability, and transformer attention provides the strongest global access pattern.
 
 ## Experimental Setup
-Default research experiments train each model across the full sequence-length suite and repeat runs across three random seeds. All experiments are fully synthetic, use fixed seeds for reproducibility, and run in PyTorch with optional CUDA acceleration.
+Default research experiments train each model across the full sequence-length suite and repeat runs across three random seeds. All experiments are fully synthetic, use fixed seeds for reproducibility, and run in PyTorch with optional CUDA acceleration. The accelerated GPU configs also support mixed precision, curriculum staging, resumable scaling runs, and stronger model sizes for A100/H100-class hardware.
 
 ### Metrics
 - Exact match accuracy
@@ -109,6 +110,12 @@ Run the scaling benchmark with three seeds:
 python experiments/run_scaling.py --config configs/research.yaml --models gru memory_gru transformer --seeds 123 456 789
 ```
 
+For A100/H100 GPUs, use the stronger accelerated config:
+
+```bash
+python experiments/run_scaling.py --config configs/h100_a100.yaml --models gru memory_gru transformer --seeds 123 456 789
+```
+
 Generate plots:
 
 ```bash
@@ -116,7 +123,7 @@ python scripts/plot_results.py
 ```
 
 ## Google Colab
-The notebook [notebooks/colab_demo.ipynb](notebooks/colab_demo.ipynb) provides a lightweight end-to-end path for CPU or GPU Colab sessions. For quick iteration, start with `configs/cpu_demo.yaml`. For longer runs, switch to `configs/default.yaml` or `configs/research.yaml`.
+The notebook [notebooks/colab_demo.ipynb](notebooks/colab_demo.ipynb) provides a lightweight end-to-end path for CPU or GPU Colab sessions. For quick iteration, start with `configs/cpu_demo.yaml`. For stronger multi-seed runs, use `configs/research.yaml`. On A100/H100 GPUs, prefer `configs/h100_a100.yaml` to enable mixed precision, curriculum staging, and larger models.
 
 ## Results Interpretation
 This benchmark is intentionally narrow and interpretable:

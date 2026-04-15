@@ -105,6 +105,7 @@ def generate_dataset_from_config(config: Dict) -> Dict[str, Path]:
         "num_passkeys": len(passkeys),
         "num_needles": data_cfg["num_needles"],
         "noise_vocab_size": len(noise_vocab),
+        "noise_vocab": noise_vocab,
         "passkeys": passkeys,
     }
     write_json(dataset_dir / "metadata.json", metadata)

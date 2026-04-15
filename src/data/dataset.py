@@ -52,10 +52,17 @@ def build_vocabulary(dataset_dir: str | Path) -> Vocabulary:
     dataset_dir = Path(dataset_dir)
     tokens = set(SPECIAL_TOKENS)
     answers = set()
+    metadata_path = dataset_dir / "metadata.json"
+    if metadata_path.exists():
+        with metadata_path.open("r", encoding="utf-8") as handle:
+            metadata = json.load(handle)
+        answers.update(metadata.get("passkeys", []))
+        tokens.update(metadata.get("noise_vocab", []))
     for split in ["train", "val", "test"]:
         for record in _read_jsonl(dataset_dir / f"{split}.jsonl"):
             tokens.update(record["tokens"])
             answers.add(record["answer"])
+    tokens.update(answers)
     idx_to_token = sorted(tokens)
     token_to_idx = {token: idx for idx, token in enumerate(idx_to_token)}
     idx_to_answer = sorted(answers)
@@ -132,4 +139,3 @@ def collate_batch(batch: List[Dict], pad_idx: int) -> Dict[str, torch.Tensor | L
         "needle_positions": torch.tensor(needle_positions, dtype=torch.long),
         "needle_position_buckets": position_buckets,
     }
-

@@ -56,11 +56,14 @@ def plot_scaling(summary_rows, output_dir: Path) -> None:
     plt.close()
 
 
-def plot_position_sensitivity(log_dir: Path, output_dir: Path) -> None:
+def plot_position_sensitivity(log_dir: Path, output_dir: Path, summary_rows) -> None:
     metrics_files = sorted(log_dir.glob("*_metrics.json"))
+    allowed_models = {row["model_type"] for row in summary_rows}
     position_curves = defaultdict(lambda: defaultdict(list))
     for metrics_path in metrics_files:
         model_type = metrics_path.stem.replace("_metrics", "").split("_seed")[0]
+        if model_type not in allowed_models or "_seed" not in metrics_path.stem:
+            continue
         with metrics_path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
         for bucket, accuracy in payload["accuracy_by_needle_position_bucket"].items():
@@ -97,10 +100,9 @@ def main() -> None:
     summary_rows = read_csv(Path(args.summary_csv))
     output_dir = Path(args.output_dir)
     plot_scaling(summary_rows=summary_rows, output_dir=output_dir)
-    plot_position_sensitivity(log_dir=Path(args.log_dir), output_dir=output_dir)
+    plot_position_sensitivity(log_dir=Path(args.log_dir), output_dir=output_dir, summary_rows=summary_rows)
     print(f"Plots saved to {output_dir}")
 
 
 if __name__ == "__main__":
     main()
-
