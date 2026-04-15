@@ -21,6 +21,13 @@ from src.utils.runtime import build_dataloaders, build_run_artifacts, make_model
 from src.utils.seed import resolve_device, set_seed
 
 
+def load_existing_rows(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    with path.open("r", newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run scaling-law experiments.")
     parser.add_argument("--config", type=str, default="configs/research.yaml")
@@ -39,6 +46,8 @@ def main() -> None:
         if sequence_length <= max_seq_len
     ]
     output_root = build_run_artifacts(base_config)
+    detailed_path = output_root / "logs" / "scaling_results_detailed.csv"
+    summary_path = output_root / "logs" / "scaling_results_summary.csv"
     results_rows = []
 
     for model_type in args.models:
@@ -90,6 +99,21 @@ def main() -> None:
             config_copy_path = output_root / "logs" / f"{config['experiment_name']}_config.yaml"
             save_config(config, config_copy_path)
 
+    merged_rows = load_existing_rows(detailed_path)
+    merged_by_key = {
+        (row["model_type"], int(row["seed"]), int(row["sequence_length"])): {
+            "model_type": row["model_type"],
+            "seed": int(row["seed"]),
+            "sequence_length": int(row["sequence_length"]),
+            "accuracy": float(row["accuracy"]),
+            "failure_rate": float(row["failure_rate"]),
+        }
+        for row in merged_rows
+    }
+    for row in results_rows:
+        merged_by_key[(row["model_type"], row["seed"], row["sequence_length"])] = row
+    results_rows = [merged_by_key[key] for key in sorted(merged_by_key)]
+
     per_group = {}
     for row in results_rows:
         key = (row["model_type"], row["sequence_length"])
@@ -109,8 +133,6 @@ def main() -> None:
             }
         )
 
-    detailed_path = output_root / "logs" / "scaling_results_detailed.csv"
-    summary_path = output_root / "logs" / "scaling_results_summary.csv"
     with detailed_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(results_rows[0].keys()))
         writer.writeheader()
