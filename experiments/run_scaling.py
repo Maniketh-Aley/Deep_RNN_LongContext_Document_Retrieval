@@ -32,6 +32,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     base_config = load_config(args.config)
+    max_seq_len = base_config["data"].get("max_seq_len", 8000)
+    base_config["data"]["lengths"] = [
+        sequence_length
+        for sequence_length in base_config["data"]["lengths"]
+        if sequence_length <= max_seq_len
+    ]
     output_root = build_run_artifacts(base_config)
     results_rows = []
 
@@ -120,4 +126,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

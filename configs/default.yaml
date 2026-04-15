@@ -2,7 +2,8 @@ experiment_name: default_gru
 output_root: outputs
 data:
   dataset_dir: data/niah_synthetic
-  lengths: [1000, 2000, 4000, 8000, 16000]
+  lengths: [1000, 2000, 4000, 8000]
+  max_seq_len: 8000
   train_samples_per_length: 256
   val_samples_per_length: 64
   test_samples_per_length: 64
@@ -33,4 +34,3 @@ training:
   seed: 123
   num_workers: 0
   device: auto
-

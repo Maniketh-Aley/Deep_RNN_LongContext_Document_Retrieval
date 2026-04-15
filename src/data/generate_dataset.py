@@ -15,6 +15,8 @@ from src.utils.config import load_config
 from src.utils.io import ensure_dir, write_json
 from src.utils.seed import set_seed
 
+MAX_SEQUENCE_LENGTH = 8000
+
 
 def _make_noise_vocab(vocab_size: int) -> List[str]:
     base_words = [f"WORD_{idx:04d}" for idx in range(vocab_size)]
@@ -52,6 +54,8 @@ def generate_split(
     samples: List[Dict] = []
     split_offsets = {"train": 11, "val": 29, "test": 47}
     for length in lengths:
+        if length > MAX_SEQUENCE_LENGTH:
+            raise ValueError("Sequence length exceeds allowed limit (8000)")
         split_rng = random.Random(base_seed + split_offsets[split] * 100_000 + length)
         for sample_idx in range(samples_per_length):
             sample_rng = random.Random(split_rng.randint(0, 10**9) + sample_idx)
@@ -81,6 +85,10 @@ def generate_split(
 
 def generate_dataset_from_config(config: Dict) -> Dict[str, Path]:
     data_cfg = config["data"]
+    max_seq_len = min(data_cfg.get("max_seq_len", MAX_SEQUENCE_LENGTH), MAX_SEQUENCE_LENGTH)
+    lengths = data_cfg["lengths"]
+    if any(length > max_seq_len for length in lengths):
+        raise ValueError("Sequence length exceeds allowed limit (8000)")
     dataset_dir = Path(data_cfg["dataset_dir"])
     ensure_dir(dataset_dir)
     set_seed(data_cfg["seed"])
@@ -91,7 +99,8 @@ def generate_dataset_from_config(config: Dict) -> Dict[str, Path]:
 
     metadata = {
         "seed": data_cfg["seed"],
-        "lengths": data_cfg["lengths"],
+        "lengths": lengths,
+        "max_seq_len": max_seq_len,
         "vocab_size": data_cfg["vocab_size"],
         "num_passkeys": len(passkeys),
         "num_needles": data_cfg["num_needles"],
@@ -109,7 +118,7 @@ def generate_dataset_from_config(config: Dict) -> Dict[str, Path]:
     for split, samples_per_length in split_to_count.items():
         samples = generate_split(
             split=split,
-            lengths=data_cfg["lengths"],
+            lengths=lengths,
             samples_per_length=samples_per_length,
             noise_vocab=noise_vocab,
             passkeys=passkeys,
