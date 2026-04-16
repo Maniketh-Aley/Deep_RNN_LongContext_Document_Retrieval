@@ -4,7 +4,7 @@
 This repository provides a reproducible PyTorch benchmark for long-context retrieval using a synthetic needle-in-a-haystack task. We compare three sequence-modeling families under controlled context growth: a vanilla GRU baseline, a memory-augmented GRU with explicit hidden-state retrieval, and a transformer encoder with full attention. The benchmark is designed to expose how retrieval quality degrades as sequence length increases and to isolate the effect of explicit memory on long-range recall.
 
 ## Problem Statement
-Sequence models often perform well on short contexts but degrade when a crucial token is placed far from the end of the sequence. This project asks a focused question: when a synthetic passkey is hidden in a long stream of distractor tokens, how do recurrent, memory-augmented recurrent, and attention-based models compare as the context grows from 1K to 8K tokens?
+Sequence models often perform well on short contexts but degrade when a crucial token is placed far from the end of the sequence. This project asks a focused question: when a synthetic passkey is hidden in a long stream of distractor tokens, how do recurrent, memory-augmented recurrent, and attention-based models compare as the context grows from 1K to 4K tokens?
 
 ## Repository Layout
 ```text
@@ -62,7 +62,7 @@ niah_benchmark/
 Each synthetic sample is a long token sequence filled with distractor words and one or more injected passkeys of the form `PASSKEY-XXXX-YYYY`. The model receives the sequence and must classify which passkey was present. Because the answer space is a fixed passkey vocabulary, retrieval can be measured with exact-match accuracy, top-1 retrieval accuracy, and failure rate.
 
 ### Synthetic Task
-- Sequence lengths: `1000, 2000, 4000, 8000`
+- Sequence lengths: `1000, 2000, 4000`
 - Splits: train, validation, test
 - Question: `"What is the passkey?"`
 - Answer: a single passkey token

@@ -2,8 +2,8 @@ experiment_name: scaling_study
 output_root: outputs
 data:
   dataset_dir: data/niah_research
-  lengths: [1000, 2000, 4000, 8000]
-  max_seq_len: 8000
+  lengths: [1000, 2000, 4000]
+  max_seq_len: 4000
   train_samples_per_length: 1024
   val_samples_per_length: 256
   test_samples_per_length: 256
@@ -45,4 +45,3 @@ training:
   curriculum_lengths:
     - [1000, 2000]
     - [1000, 2000, 4000]
-    - [1000, 2000, 4000, 8000]
