@@ -46,6 +46,13 @@ niah_benchmark/
       seed.py
   experiments/
     run_scaling.py
+  results/
+    final_4k/
+      scaling_results_summary.csv
+      scaling_results_detailed.csv
+      accuracy_vs_sequence_length.png
+      failure_rate_vs_sequence_length.png
+      needle_position_sensitivity.png
   outputs/
     logs/
     plots/
@@ -136,6 +143,37 @@ The plotting utilities produce publication-style figures for:
 - Failure rate vs sequence length
 - Needle position sensitivity
 
+## Final 4K Results
+The final reported benchmark in this repository uses a 4K maximum context length (`1000, 2000, 4000`) to keep the experiment reproducible and computationally tractable while still exercising long-context retrieval behavior.
+
+Final artifacts are versioned in `results/final_4k/`:
+- `scaling_results_summary.csv`
+- `scaling_results_detailed.csv`
+- `accuracy_vs_sequence_length.png`
+- `failure_rate_vs_sequence_length.png`
+- `needle_position_sensitivity.png`
+
+### Summary Table
+
+| Model | 1000 | 2000 | 4000 |
+| --- | ---: | ---: | ---: |
+| GRU | 0.002604 | 0.003906 | 0.003906 |
+| Memory-GRU | 0.005208 | 0.009115 | 0.003906 |
+| Transformer | 0.003906 | 0.001302 | 0.006510 |
+
+### Interpretation
+- Memory-GRU is the strongest model at 1K and 2K, showing the clearest benefit from explicit retrieval memory over the vanilla GRU baseline.
+- Transformer becomes the strongest model at 4K, suggesting attention helps most at the longest tested context length.
+- Vanilla GRU remains the weakest overall and never achieves the best mean accuracy at any sequence length.
+- Absolute accuracies are still low across all models, so the benchmark should be interpreted as a relative comparison under a hard retrieval task rather than a solved setting.
+
+### Figures
+![Accuracy vs Sequence Length](results/final_4k/accuracy_vs_sequence_length.png)
+
+![Failure Rate vs Sequence Length](results/final_4k/failure_rate_vs_sequence_length.png)
+
+![Needle Position Sensitivity](results/final_4k/needle_position_sensitivity.png)
+
 ## Example Outputs
 Expected artifacts are written to:
 - `outputs/checkpoints/`: best model checkpoints
@@ -143,10 +181,10 @@ Expected artifacts are written to:
 - `outputs/plots/`: saved figures in PNG format
 
 ## Key Findings This Benchmark Is Designed To Surface
-1. Vanilla RNN/GRU models fail progressively as context length increases.
-2. Explicit memory retrieval improves stability over the vanilla recurrent baseline.
-3. Transformer encoders provide the strongest long-range retrieval under full attention.
-4. Needle position matters: early-context needles are usually harder for recurrent models than late-context needles.
+1. Vanilla GRU remains a weak baseline for long-context retrieval, even in the 1K-4K range.
+2. Explicit memory improves retrieval relative to vanilla GRU, especially at short-to-mid context lengths.
+3. Transformer becomes strongest at the longest tested context length (4K).
+4. Needle-position sensitivity differs by architecture, but all models still operate in a low-accuracy regime.
 
 ## Reproducibility Notes
 - Seeds are fixed at dataset generation, training, and evaluation time.
