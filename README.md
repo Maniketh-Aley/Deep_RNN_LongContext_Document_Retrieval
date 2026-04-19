@@ -3,6 +3,30 @@
 ## Abstract
 This repository provides a reproducible PyTorch benchmark for long-context retrieval using a synthetic needle-in-a-haystack task. We compare three sequence-modeling families under controlled context growth: a vanilla GRU baseline, a memory-augmented GRU with explicit hidden-state retrieval, and a transformer encoder with full attention. The benchmark is designed to expose how retrieval quality degrades as sequence length increases and to isolate the effect of explicit memory on long-range recall.
 
+## Tech Stack
+- Python
+- PyTorch
+- NumPy
+- Matplotlib
+- PyYAML
+- tqdm
+- Google Colab
+- NVIDIA GPU acceleration (A100/H100)
+- JSONL-based synthetic dataset pipeline
+- Git and GitHub for version control and experiment packaging
+
+## Skills Demonstrated
+- Deep learning model implementation in PyTorch
+- Sequence modeling with GRU, memory-augmented RNNs, and transformer encoders
+- Long-context retrieval benchmark design
+- Synthetic dataset generation and controlled experiment design
+- Reproducible ML experimentation with fixed seeds and config-driven pipelines
+- GPU-aware training optimization with mixed precision and curriculum-style staging
+- Evaluation design with aggregate metrics, seed-based analysis, and plotting
+- Research engineering for benchmarking, ablation-style comparison, and result interpretation
+- Colab-based large-scale experiment execution and artifact management
+- Technical documentation and research-style project presentation
+
 ## Problem Statement
 Sequence models often perform well on short contexts but degrade when a crucial token is placed far from the end of the sequence. This project asks a focused question: when a synthetic passkey is hidden in a long stream of distractor tokens, how do recurrent, memory-augmented recurrent, and attention-based models compare as the context grows from 1K to 4K tokens?
 
