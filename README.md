@@ -46,6 +46,8 @@ niah_benchmark/
       seed.py
   experiments/
     run_scaling.py
+  references/
+    RNN_memory_Cache.pdf
   results/
     final_4k/
       scaling_results_summary.csv
@@ -63,10 +65,19 @@ niah_benchmark/
     plot_results.py
   notebooks/
     colab_demo.ipynb
+    RNN_notebook.ipynb
 ```
 
 ## Methodology
 Each synthetic sample is a long token sequence filled with distractor words and one or more injected passkeys of the form `PASSKEY-XXXX-YYYY`. The model receives the sequence and must classify which passkey was present. Because the answer space is a fixed passkey vocabulary, retrieval can be measured with exact-match accuracy, top-1 retrieval accuracy, and failure rate.
+
+## Paper Context
+This project was motivated by prior work on memory-augmented recurrent models, included here as [references/RNN_memory_Cache.pdf](references/RNN_memory_Cache.pdf). The central idea relevant to this repository is that explicit memory can help recurrent architectures retrieve information that is difficult to preserve in a single hidden state over long contexts.
+
+This benchmark should be understood as a small-scale, synthetic, benchmark-style implementation inspired by that line of work, not as an exact reproduction of the reference paper. In particular:
+- the task here is a synthetic needle-in-a-haystack retrieval benchmark rather than the paper's original full experimental setting
+- the memory module here is intentionally simple and interpretable
+- the goal is to test whether explicit memory improves retrieval relative to a vanilla recurrent baseline under increasing context length
 
 ### Synthetic Task
 - Sequence lengths: `1000, 2000, 4000`
@@ -132,6 +143,8 @@ python scripts/plot_results.py
 ## Google Colab
 The notebook [notebooks/colab_demo.ipynb](notebooks/colab_demo.ipynb) provides a lightweight end-to-end path for CPU or GPU Colab sessions. For quick iteration, start with `configs/cpu_demo.yaml`. For stronger multi-seed runs, use `configs/research.yaml`. On A100/H100 GPUs, prefer `configs/h100_a100.yaml` to enable mixed precision, curriculum staging, and larger models.
 
+The full executed notebook used during project runs is versioned as [notebooks/RNN_notebook.ipynb](notebooks/RNN_notebook.ipynb).
+
 ## Results Interpretation
 This benchmark is intentionally narrow and interpretable:
 - If GRU accuracy drops sharply with length, the benchmark is capturing recurrent long-context failure.
@@ -167,6 +180,15 @@ Final artifacts are versioned in `results/final_4k/`:
 - Vanilla GRU remains the weakest overall and never achieves the best mean accuracy at any sequence length.
 - Absolute accuracies are still low across all models, so the benchmark should be interpreted as a relative comparison under a hard retrieval task rather than a solved setting.
 
+## Challenges And Practical Constraints
+This project went through multiple experimental iterations before arriving at the final 4K benchmark. The main practical challenges were:
+- long-context scaling is expensive, especially for transformer baselines as sequence length grows
+- Colab and laptop-based workflows introduced runtime interruptions and storage-management issues during multi-seed sweeps
+- early 8K and larger-context attempts produced heavy compute load and unstable execution relative to available time and memory budgets
+- result management required explicit fixes so repeated model-by-model runs would merge correctly instead of overwriting aggregate CSVs
+
+Because of those compute and runtime constraints, the final reported benchmark caps context length at 4K rather than the initially planned 16K. This tradeoff improved reproducibility, made full multi-seed comparisons feasible, and produced cleaner final comparative results.
+
 ### Figures
 ![Accuracy vs Sequence Length](results/final_4k/accuracy_vs_sequence_length.png)
 
@@ -190,3 +212,4 @@ Expected artifacts are written to:
 - Seeds are fixed at dataset generation, training, and evaluation time.
 - No external datasets are required.
 - All configuration is centralized in YAML files for easy experiment control.
+- Final benchmark artifacts are versioned in `results/final_4k/`.
